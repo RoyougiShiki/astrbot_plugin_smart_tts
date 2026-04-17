@@ -1,14 +1,15 @@
 {
   "tts_provider_id": {
     "type": "string",
-    "description": "TTS Provider ID（如 edge_tts）",
-    "hint": "填写 AstrBot 中已配置的 TTS Provider ID",
-    "default": "edge_tts"
+    "description": "TTS 模型提供商",
+    "hint": "选择已配置的 TTS Provider，用于生成语音",
+    "_special": "select_provider_tts",
+    "default": ""
   },
   "max_text_length": {
     "type": "int",
-    "description": "超过此长度的文本不发送语音（字符数）",
-    "hint": "避免长消息生成过长的语音",
+    "description": "最大语音文本长度",
+    "hint": "超过此长度的文本不发送语音（字符数），避免长消息生成过长语音",
     "default": 500
   }
 }
