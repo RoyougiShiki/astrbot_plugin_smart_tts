@@ -85,7 +85,9 @@ class SmartTTSPlugin(Star):
 
         # 生成语音并追加到消息链
         try:
-            audio_path = await self._generate_tts(text)
+            # 清理 Markdown 格式符号，避免 TTS 读出星号等符号
+            clean_text = self._strip_markdown(text)
+            audio_path = await self._generate_tts(clean_text)
             if audio_path:
                 result.chain.append(Record(file=audio_path))
                 # 注册临时文件，pipeline 结束后自动清理
@@ -100,6 +102,20 @@ class SmartTTSPlugin(Star):
             if pattern.search(text):
                 return False
         return True
+
+    @staticmethod
+    def _strip_markdown(text: str) -> str:
+        """清理常见 Markdown 格式符号，避免 TTS 读出星号、井号等"""
+        # 加粗/斜体 **text** / *text* / __text__ / _text_
+        text = re.sub(r"\*{1,2}([^*]+)\*{1,2}", r"\1", text)
+        text = re.sub(r"_{1,2}([^_]+)_{1,2}", r"\1", text)
+        # 删除线 ~~text~~
+        text = re.sub(r"~~([^~]+)~~", r"\1", text)
+        # 剩余独立的 Markdown 符号
+        text = re.sub(r"[*#`~|>]", "", text)
+        # 合并多余空格
+        text = re.sub(r"\s+", " ", text).strip()
+        return text
 
     async def _generate_tts(self, text: str) -> str | None:
         """调用 TTS Provider 生成语音"""
