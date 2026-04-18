@@ -88,6 +88,8 @@ class SmartTTSPlugin(Star):
             audio_path = await self._generate_tts(text)
             if audio_path:
                 result.chain.append(Record(file=audio_path))
+                # 注册临时文件，pipeline 结束后自动清理
+                event.track_temporary_local_file(audio_path)
                 logger.info(f"[SmartTTS] 已追加语音: {audio_path}")
         except Exception as e:
             logger.error(f"[SmartTTS] 语音生成失败: {e}")
