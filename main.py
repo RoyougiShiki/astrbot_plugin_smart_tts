@@ -63,10 +63,6 @@ class SmartTTSPlugin(Star):
 
     def _reinstall_pilk(self):
         """安装 pilk 语音编码库"""
-        import subprocess
-        import sys
-        import os
-
         pip_path = os.path.join(os.path.dirname(sys.executable), "pip.exe")
         if not os.path.exists(pip_path):
             pip_path = os.path.join(os.path.dirname(sys.executable), "pip")
@@ -93,7 +89,40 @@ class SmartTTSPlugin(Star):
                     pilk_dir = os.path.join(site_packages, "pilk")
                     os.makedirs(pilk_dir, exist_ok=True)
 
-                    init_content = pilk compatibility wrapper - delegates to pysilk
+                    compat_src = os.path.join(os.path.dirname(__file__), "pilk_compat.py")
+                    with open(compat_src, "r", encoding="utf-8") as f:
+                        init_content = f.read()
+                    init_path = os.path.join(pilk_dir, "__init__.py")
+                    with open(init_path, "w", encoding="utf-8") as f:
+                        f.write(init_content)
+
+                    r2 = subprocess.run([sys.executable, "-c", "import pilk; print('ok')"], capture_output=True, text=True, timeout=10)
+                    if "ok" in r2.stdout:
+                        logger.info("[SmartTTS] pilk 兼容层安装成功")
+                    else:
+                        logger.warning("[SmartTTS] pilk 兼容层验证失败")
+                else:
+                    logger.warning(f"[SmartTTS] pysilk 安装失败: {r.stderr}")
+            except Exception as e:
+                logger.error(f"[SmartTTS] 安装 pilk 兼容层失败: {e}")
+
+    def _reinstall_edge_tts(self):
+        """重装 edge-tts"""
+        pip_path = os.path.join(os.path.dirname(sys.executable), "pip.exe")
+        if not os.path.exists(pip_path):
+            pip_path = os.path.join(os.path.dirname(sys.executable), "pip")
+
+        logger.info("[SmartTTS] 正在重装 edge-tts...")
+        try:
+            subprocess.run([pip_path, "uninstall", "-y", "edge-tts"], capture_output=True, text=True, timeout=60)
+            r = subprocess.run([pip_path, "install", "edge-tts"], capture_output=True, text=True, timeout=120)
+            if r.returncode == 0:
+                logger.info("[SmartTTS] edge-tts 重装成功")
+            else:
+                logger.warning(f"[SmartTTS] edge-tts 安装失败: {r.stderr}")
+        except Exception as e:
+            logger.error(f"[SmartTTS] 重装 edge-tts 异常: {e}")
+
     @filter.on_decorating_result()
     async def on_decorating_result(self, event: AstrMessageEvent) -> None:
         """在消息发送前，判断是否需要追加语音"""
