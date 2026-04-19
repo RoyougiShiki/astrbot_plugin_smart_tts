@@ -56,25 +56,169 @@ class SmartTTSPlugin(Star):
 
         # Check if reinstall_edge_tts is triggered
         if self.conf.get("reinstall_edge_tts", False):
-            self._reinstall_edge_tts()
+            self._reinstall_deps()
 
-    def _reinstall_edge_tts(self):
-        """重新安装 edge-tts 依赖"""
-        logger.info("[SmartTTS] 正在重新安装 edge-tts 依赖...")
+    def _reinstall_deps(self):
+        """重新安装 TTS 所需依赖"""
+        logger.info("[SmartTTS] 正在重新安装 TTS 依赖...")
+
+        pip_path = os.path.join(os.path.dirname(sys.executable), "pip.exe")
+        if not os.path.exists(pip_path):
+            pip_path = os.path.join(os.path.dirname(sys.executable), "pip")
+
+        # 1. Install edge-tts
+        logger.info("[SmartTTS] 正在安装 edge-tts...")
         try:
-            pip_path = os.path.join(os.path.dirname(sys.executable), "pip.exe")
-            if not os.path.exists(pip_path):
-                pip_path = os.path.join(os.path.dirname(sys.executable), "pip")
             r = subprocess.run(
                 [pip_path, "install", "edge-tts"],
                 capture_output=True, text=True, timeout=120
             )
             if r.returncode == 0:
-                logger.info("[SmartTTS] edge-tts 安装成功！请重启 AstrBot 使其生效。")
+                logger.info("[SmartTTS] edge-tts 安装成功")
             else:
                 logger.error(f"[SmartTTS] edge-tts 安装失败: {r.stderr[:200]}")
         except Exception as e:
             logger.error(f"[SmartTTS] edge-tts 安装异常: {e}")
+
+        # 2. Install pilk (try direct install first, fallback to pysilk compat layer)
+        logger.info("[SmartTTS] 正在安装 pilk...")
+        pilk_installed = False
+        try:
+            subprocess.run(
+                [pip_path, "install", "pilk"],
+                capture_output=True, text=True, timeout=120
+            )
+            # Verify it actually works (can import)
+            r2 = subprocess.run(
+                [sys.executable, "-c", "import pilk; print('ok')"],
+                capture_output=True, text=True, timeout=10
+            )
+            if "ok" in r2.stdout:
+                pilk_installed = True
+                logger.info("[SmartTTS] pilk 安装成功")
+        except Exception:
+            pass
+
+        if not pilk_installed:
+            logger.info("[SmartTTS] pilk 直接安装失败，使用 pysilk 兼容层...")
+            try:
+                # Install pysilk
+                r = subprocess.run(
+                    [pip_path, "install", "pysilk"],
+                    capture_output=True, text=True, timeout=60
+                )
+                if r.returncode == 0:
+                    # Create pilk compatibility wrapper
+                    site_packages = os.path.join(os.path.dirname(sys.executable), "..", "Lib", "site-packages")
+                    pilk_dir = os.path.join(site_packages, "pilk")
+                    os.makedirs(pilk_dir, exist_ok=True)
+
+                    init_content = '''"""pilk compatibility wrapper - delegates to pysilk"""
+import os
+import io
+import pysilk
+
+
+def encode(input_path, output_path, pcm_rate=24000, tencent=True, **kwargs):
+    if isinstance(input_path, (str, bytes, os.PathLike)):
+        with open(input_path, 'rb') as fin:
+            pcm_data = fin.read()
+        input_bio = io.BytesIO(pcm_data)
+    else:
+        input_bio = input_path
+
+    if isinstance(output_path, (str, bytes, os.PathLike)):
+        output_bio = io.BytesIO()
+    else:
+        output_bio = output_path
+
+    pysilk.encode(
+        input_bio,
+        output_bio,
+        pcm_rate,
+        pcm_rate,
+        tencent=tencent,
+    )
+
+    if isinstance(output_path, (str, bytes, os.PathLike)):
+        with open(output_path, 'wb') as fout:
+            fout.write(output_bio.getvalue())
+
+    try:
+        duration = get_duration(output_path if isinstance(output_path, (str, bytes, os.PathLike)) else output_bio.getvalue())
+    except Exception:
+        duration = len(pcm_data) / (pcm_rate * 2) * 1000
+
+    return int(duration)
+
+
+def decode(input_path, output_path, pcm_rate=24000):
+    if isinstance(input_path, (str, bytes, os.PathLike)):
+        with open(input_path, 'rb') as fin:
+            silk_data = fin.read()
+        input_bio = io.BytesIO(silk_data)
+    else:
+        input_bio = input_path
+
+    if isinstance(output_path, (str, bytes, os.PathLike)):
+        output_bio = io.BytesIO()
+    else:
+        output_bio = output_path
+
+    pysilk.decode(input_bio, output_bio, pcm_rate)
+
+    if isinstance(output_path, (str, bytes, os.PathLike)):
+        with open(output_path, 'wb') as fout:
+            fout.write(output_bio.getvalue())
+
+
+def get_duration(silk_path, frame_ms=20):
+    if isinstance(silk_path, (str, bytes, os.PathLike)):
+        with open(silk_path, 'rb') as f:
+            data = f.read()
+    elif isinstance(silk_path, bytes):
+        data = silk_path
+    else:
+        data = silk_path.read() if hasattr(silk_path, 'read') else silk_path
+
+    if data.startswith(b'#!SILK_V3'):
+        data = data[9:]
+
+    duration_ms = 0
+    offset = 0
+    while offset < len(data) - 1:
+        if offset + 2 > len(data):
+            break
+        frame_size = data[offset] + data[offset + 1] * 16
+        if frame_size <= 0 or offset + 2 + frame_size > len(data):
+            break
+        offset += 2 + frame_size
+        duration_ms += frame_ms
+
+    return duration_ms
+'''
+
+                    init_path = os.path.join(pilk_dir, '__init__.py')
+                    with open(init_path, 'w', encoding='utf-8') as f:
+                        f.write(init_content)
+
+                    # Verify
+                    r3 = subprocess.run(
+                        [sys.executable, "-c", "import pilk; print('ok')"],
+                        capture_output=True, text=True, timeout=10
+                    )
+                    if "ok" in r3.stdout:
+                        logger.info("[SmartTTS] pilk 兼容层（基于 pysilk）安装成功")
+                        pilk_installed = True
+                    else:
+                        logger.error(f"[SmartTTS] pilk 兼容层创建失败: {r3.stderr[:200]}")
+            except Exception as e:
+                logger.error(f"[SmartTTS] pilk 兼容层安装异常: {e}")
+
+        if pilk_installed:
+            logger.info("[SmartTTS] 所有依赖安装完成！请重启 AstrBot 使其生效。")
+        else:
+            logger.warning("[SmartTTS] pilk 安装失败，QQ 语音发送可能异常")
 
         # Auto-reset the switch
         self.conf["reinstall_edge_tts"] = False
