@@ -35,10 +35,12 @@ def _read_wav_pcm16_mono(wav_data: bytes, expected_rate: int | None = None):
     return pcm, framerate
 
 
-def encode(input, output=None, rate=24000, tencent=True):
+def encode(input, output=None, pcm_rate=24000, rate=24000, tencent=True, **kwargs):
+    """Encode WAV/PCM to SILK. Supports both pcm_rate and rate parameter names."""
+    sample_rate = pcm_rate or rate
     wav_bytes = _to_bytes(input)
-    pcm, sr = _read_wav_pcm16_mono(wav_bytes, expected_rate=rate)
-    silk = pysilk.encode(pcm, data_rate=rate, sample_rate=sr)
+    pcm, sr = _read_wav_pcm16_mono(wav_bytes, expected_rate=sample_rate)
+    silk = pysilk.encode(pcm, data_rate=sample_rate, sample_rate=sr)
 
     if output is None:
         return silk
@@ -47,18 +49,20 @@ def encode(input, output=None, rate=24000, tencent=True):
         return output
     with open(output, "wb") as f:
         f.write(silk)
-    return output
+    return len(pcm) // 2 // sample_rate  # return duration in seconds
 
 
-def decode(input, output=None, rate=24000, tencent=True):
+def decode(input, output=None, pcm_rate=24000, rate=24000, tencent=True, **kwargs):
+    """Decode SILK to WAV. Supports both pcm_rate and rate parameter names."""
+    sample_rate = pcm_rate or rate
     silk_bytes = _to_bytes(input)
-    pcm = pysilk.decode(silk_bytes, sample_rate=rate)
+    pcm = pysilk.decode(silk_bytes, sample_rate=sample_rate)
 
     wav_buf = io.BytesIO()
     with wave.open(wav_buf, "wb") as wf:
         wf.setnchannels(1)
         wf.setsampwidth(2)
-        wf.setframerate(rate)
+        wf.setframerate(sample_rate)
         wf.writeframes(pcm)
     wav_data = wav_buf.getvalue()
 
