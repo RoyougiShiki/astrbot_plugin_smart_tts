@@ -15,7 +15,13 @@
   "reinstall_edge_tts": {
     "type": "bool",
     "description": "重新安装 Edge-TTS 依赖",
-    "hint": "当使用 Edge-TTS 时，如果更新 AstrBot 后语音功能失效，打开此开关后重启插件即可自动重新安装 edge-tts 库。安装完成后开关会自动关闭。仅 Edge-TTS 引擎需要此操作，其他 TTS 服务（如 MeloTTS、CosyVoice2）通过 API 调用，无需本地依赖。",
+    "hint": "当使用 Edge-TTS 时，如果更新 AstrBot 后语音功能失效，打开此开关后重载插件即可自动重新安装 edge-tts 库。仅 Edge-TTS 引擎需要此操作，其他 TTS 服务（如 MeloTTS、CosyVoice2）通过 API 调用，无需此依赖。安装完成后开关自动关闭。",
+    "default": false
+  },
+  "reinstall_pilk": {
+    "type": "bool",
+    "description": "重新安装 PILK 语音编码库（QQ 机器人必需）",
+    "hint": "QQ 官方机器人发送语音需要 SILK 编码格式，pilk 库负责此转换。无论使用哪种 TTS 引擎，只要是 QQ 机器人就需要此库。如果更新 AstrBot 后语音发送失败，打开此开关后重载插件即可自动安装。安装完成后开关自动关闭。",
     "default": false
   }
 }
