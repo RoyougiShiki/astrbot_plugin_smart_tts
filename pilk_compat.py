@@ -40,7 +40,12 @@ def encode(input, output=None, pcm_rate=24000, rate=24000, tencent=True, **kwarg
     sample_rate = pcm_rate or rate
     wav_bytes = _to_bytes(input)
     pcm, sr = _read_wav_pcm16_mono(wav_bytes, expected_rate=sample_rate)
-    silk = pysilk.encode(pcm, data_rate=sample_rate, sample_rate=sr)
+    
+    # pysilk.encode(input, output, sample_rate, bit_rate, tencent=True)
+    input_bio = io.BytesIO(pcm)
+    output_bio = io.BytesIO()
+    pysilk.encode(input_bio, output_bio, sr, sample_rate, tencent=tencent)
+    silk = output_bio.getvalue()
 
     if output is None:
         return silk
