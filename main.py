@@ -13,7 +13,10 @@
 
 from __future__ import annotations
 
+import os
 import re
+import subprocess
+import sys
 
 from astrbot.api import AstrBotConfig, logger
 from astrbot.api.event import filter, AstrMessageEvent
@@ -50,6 +53,31 @@ class SmartTTSPlugin(Star):
         self.conf = config
         self.tts_provider_id = config.get("tts_provider_id", "")
         self.max_text_length = config.get("max_text_length", 500)
+
+        # Check if reinstall_edge_tts is triggered
+        if self.conf.get("reinstall_edge_tts", False):
+            self._reinstall_edge_tts()
+
+    def _reinstall_edge_tts(self):
+        """重新安装 edge-tts 依赖"""
+        logger.info("[SmartTTS] 正在重新安装 edge-tts 依赖...")
+        try:
+            pip_path = os.path.join(os.path.dirname(sys.executable), "pip.exe")
+            if not os.path.exists(pip_path):
+                pip_path = os.path.join(os.path.dirname(sys.executable), "pip")
+            r = subprocess.run(
+                [pip_path, "install", "edge-tts"],
+                capture_output=True, text=True, timeout=120
+            )
+            if r.returncode == 0:
+                logger.info("[SmartTTS] edge-tts 安装成功！请重启 AstrBot 使其生效。")
+            else:
+                logger.error(f"[SmartTTS] edge-tts 安装失败: {r.stderr[:200]}")
+        except Exception as e:
+            logger.error(f"[SmartTTS] edge-tts 安装异常: {e}")
+
+        # Auto-reset the switch
+        self.conf["reinstall_edge_tts"] = False
 
     @filter.on_decorating_result()
     async def on_decorating_result(self, event: AstrMessageEvent) -> None:

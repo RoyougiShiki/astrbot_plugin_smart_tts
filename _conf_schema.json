@@ -13,9 +13,9 @@
     "default": 500
   },
   "reinstall_edge_tts": {
-    "type": "button",
+    "type": "bool",
     "description": "重新安装 Edge-TTS 依赖",
-    "hint": "当使用 Edge-TTS 时，如果更新 AstrBot 后语音功能失效，点击此按钮重新安装 edge-tts 库。注意：仅 Edge-TTS 引擎需要此操作，其他 TTS 服务（如 MeloTTS）通过 API 调用，无需本地依赖。",
-    "text": "重新安装 Edge-TTS 依赖"
+    "hint": "当使用 Edge-TTS 时，如果更新 AstrBot 后语音功能失效，打开此开关后重启插件即可自动重新安装 edge-tts 库。安装完成后开关会自动关闭。仅 Edge-TTS 引擎需要此操作，其他 TTS 服务（如 MeloTTS、CosyVoice2）通过 API 调用，无需本地依赖。",
+    "default": false
   }
 }
