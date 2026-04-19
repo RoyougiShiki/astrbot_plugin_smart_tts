@@ -1,5 +1,5 @@
 name: astrbot_plugin_smart_tts
 author: RoyougiShiki
 description: 智能TTS - 始终发送文字，仅在纯文本（无代码块/表格等复杂格式）时额外发送语音
-version: 0.1.1
+version: 0.1.2
 repo: https://github.com/RoyougiShiki/astrbot_plugin_smart_tts.git

@@ -25,7 +25,7 @@ from astrbot.api.star import Context, Star, register
     "astrbot_plugin_smart_tts",
     "RoyougiShiki",
     "智能 TTS - 纯文本时额外发送语音",
-    "0.1.1",
+    "0.1.2",
 )
 class SmartTTSPlugin(Star):
     """智能 TTS 插件"""

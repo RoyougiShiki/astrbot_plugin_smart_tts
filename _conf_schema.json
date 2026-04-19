@@ -11,5 +11,11 @@
     "description": "最大语音文本长度",
     "hint": "超过此长度的文本不发送语音（字符数），避免长消息生成过长语音",
     "default": 500
+  },
+  "reinstall_edge_tts": {
+    "type": "button",
+    "description": "重新安装 Edge-TTS 依赖",
+    "hint": "当使用 Edge-TTS 时，如果更新 AstrBot 后语音功能失效，点击此按钮重新安装 edge-tts 库。注意：仅 Edge-TTS 引擎需要此操作，其他 TTS 服务（如 MeloTTS）通过 API 调用，无需本地依赖。",
+    "text": "重新安装 Edge-TTS 依赖"
   }
 }
