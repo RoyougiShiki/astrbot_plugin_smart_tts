@@ -189,6 +189,25 @@ class SmartTTSPlugin(Star):
         text = re.sub(r"\s+", " ", text).strip()
         return text
 
+    async def _cleanup_temp_files(self):
+        """启动时清理自己产生的临时音频文件（参考 videosum 插件的清理模式）"""
+        import time, glob
+        temp_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "temp")
+        max_age = 86400  # 24 小时
+        now = time.time()
+        patterns = ["edge_tts_*", "smart_tts_*"]
+        for pattern in patterns:
+            for f in glob.glob(os.path.join(temp_dir, pattern)):
+                try:
+                    if now - os.path.getmtime(f) > max_age:
+                        os.remove(f)
+                except Exception:
+                    pass
+
+    async def initialize(self):
+        await self._cleanup_temp_files()
+        logger.info("smart_tts: 插件已加载，临时文件已清理")
+
     async def _generate_tts(self, text: str) -> str | None:
         """调用 TTS Provider 生成语音"""
         prov_mgr = self.context.provider_manager
